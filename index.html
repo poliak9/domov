@@ -459,6 +459,25 @@
   </div>
 </header>
 
+<!-- ── MAP SECTION ── -->
+<div class="map-section">
+  <h2>Mapa zařízení</h2>
+  <p class="map-note">Kliknutím na marker zobrazíte detail zařízení · Barva = typ (zelená = veřejný, hnědočervená = soukromý)</p>
+  <div class="map-legend">
+    <div class="map-legend-item"><span class="legend-circle" style="background:#2d6a4f"></span>Veřejný (hl. m. Praha / MČ)</div>
+    <div class="map-legend-item"><span class="legend-circle" style="background:#8b5e3c"></span>Soukromý</div>
+  </div>
+  <div class="map-filter-bar">
+    <span style="font-size:11.5px;color:#5a5040;font-weight:500;text-transform:uppercase;letter-spacing:0.4px">Zobrazit:</span>
+    <button class="map-filter-btn active" id="mapBtnAll" onclick="mapFilter('all')">Vše</button>
+    <button class="map-filter-btn" id="mapBtnPublic" onclick="mapFilter('public')">Veřejné</button>
+    <button class="map-filter-btn" id="mapBtnPrivate" onclick="mapFilter('private')">Soukromé</button>
+    <button class="map-filter-btn" id="mapBtnPraha" onclick="mapFilter('Praha')">Praha</button>
+    <button class="map-filter-btn" id="mapBtnOkoli" onclick="mapFilter('okoli')">Mimo Prahu</button>
+  </div>
+  <div id="map"></div>
+</div>
+
 <div class="controls">
   <label>Hledat:</label>
   <input type="text" id="searchInput" placeholder="název, adresa, služba…">
@@ -496,25 +515,6 @@
 </div>
 
 <footer>Zdroje: weby jednotlivých zařízení, MHD Praha (PID), zákon č. 108/2006 Sb. o sociálních službách · Ceny aktuální dle dostupných informací k datu zpracování (březen 2026) · Soukromé ceny jsou orientační, vždy ověřte přímo se zařízením.</footer>
-
-<!-- ── MAP SECTION ── -->
-<div class="map-section">
-  <h2>Mapa zařízení</h2>
-  <p class="map-note">Kliknutím na marker zobrazíte detail zařízení · Barva = typ (zelená = veřejný, hnědočervená = soukromý)</p>
-  <div class="map-legend">
-    <div class="map-legend-item"><span class="legend-circle" style="background:#2d6a4f"></span>Veřejný (hl. m. Praha / MČ)</div>
-    <div class="map-legend-item"><span class="legend-circle" style="background:#8b5e3c"></span>Soukromý</div>
-  </div>
-  <div class="map-filter-bar">
-    <span style="font-size:11.5px;color:#5a5040;font-weight:500;text-transform:uppercase;letter-spacing:0.4px">Zobrazit:</span>
-    <button class="map-filter-btn active" id="mapBtnAll" onclick="mapFilter('all')">Vše</button>
-    <button class="map-filter-btn" id="mapBtnPublic" onclick="mapFilter('public')">Veřejné</button>
-    <button class="map-filter-btn" id="mapBtnPrivate" onclick="mapFilter('private')">Soukromé</button>
-    <button class="map-filter-btn" id="mapBtnPraha" onclick="mapFilter('Praha')">Praha</button>
-    <button class="map-filter-btn" id="mapBtnOkoli" onclick="mapFilter('okoli')">Mimo Prahu</button>
-  </div>
-  <div id="map"></div>
-</div>
 
 <script>
 const DATA = [
