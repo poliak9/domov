@@ -1,0 +1,1461 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Domovy pro seniory – Praha a okolí</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+  :root {
+    --ink: #1a1814;
+    --paper: #f7f4ef;
+    --warm: #e8e2d9;
+    --accent: #8b5e3c;
+    --accent2: #3c5e8b;
+    --public: #2d6a4f;
+    --private: #6b3a2a;
+    --rule: #c8bfb0;
+    --hover-bg: #ede8e0;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    font-size: 13px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  header {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 32px 40px 28px;
+    border-bottom: 4px solid var(--accent);
+  }
+
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    margin-bottom: 6px;
+  }
+
+  header p {
+    font-size: 12.5px;
+    color: #b0a898;
+    font-weight: 300;
+    letter-spacing: 0.2px;
+  }
+
+  .legend-bar {
+    font-size: 11px;
+    margin-top: 10px;
+    display: flex;
+    gap: 20px;
+    align-items: center;
+  }
+
+  .legend-dot {
+    display: inline-block;
+    width: 10px; height: 10px;
+    border-radius: 2px;
+    margin-right: 5px;
+  }
+
+  .controls {
+    padding: 16px 40px;
+    background: var(--warm);
+    border-bottom: 1px solid var(--rule);
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .controls label {
+    font-size: 11.5px;
+    font-weight: 500;
+    color: #5a5040;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-right: 4px;
+  }
+
+  input[type=text], select {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 12.5px;
+    padding: 6px 12px;
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    background: #fff;
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  input[type=text]:focus, select:focus { border-color: var(--accent); }
+
+  input[type=text] { width: 240px; }
+
+  .count-badge {
+    font-size: 11px;
+    background: var(--ink);
+    color: var(--paper);
+    padding: 3px 9px;
+    border-radius: 10px;
+    margin-left: auto;
+    font-weight: 500;
+  }
+
+  .table-wrap {
+    overflow-x: auto;
+    padding: 0 40px 60px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+  }
+
+  thead th {
+    font-family: 'Playfair Display', serif;
+    font-size: 11.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #5a5040;
+    border-bottom: 2px solid var(--ink);
+    padding: 10px 12px 9px;
+    text-align: left;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  thead th:hover { color: var(--accent); }
+  thead th.sort-asc::after { content: ' ↑'; }
+  thead th.sort-desc::after { content: ' ↓'; }
+
+  tbody tr {
+    border-bottom: 1px solid var(--rule);
+    transition: background 0.1s;
+  }
+
+  tbody tr:hover { background: var(--hover-bg); }
+
+  td {
+    padding: 10px 12px;
+    vertical-align: top;
+    font-size: 12.5px;
+  }
+
+  td.name-cell {
+    font-weight: 600;
+    font-size: 13px;
+    min-width: 200px;
+    max-width: 230px;
+  }
+
+  td.name-cell a {
+    color: var(--ink);
+    text-decoration: none;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  td.name-cell a:hover { border-color: var(--accent); color: var(--accent); }
+
+  td.name-cell .address {
+    font-weight: 300;
+    font-size: 11.5px;
+    color: #6b6050;
+    margin-top: 2px;
+    line-height: 1.4;
+  }
+
+  .type-badge {
+    display: inline-block;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    padding: 2px 7px;
+    border-radius: 2px;
+    text-transform: uppercase;
+  }
+
+  .type-public {
+    background: #d8f0e5;
+    color: var(--public);
+    border: 1px solid #b0d8c0;
+  }
+
+  .type-private {
+    background: #f5e2d8;
+    color: var(--private);
+    border: 1px solid #d8b8a8;
+  }
+
+  td.transport-cell {
+    min-width: 190px;
+    max-width: 210px;
+    color: #3a3028;
+  }
+
+  .transport-line {
+    display: flex;
+    align-items: flex-start;
+    gap: 5px;
+    margin-bottom: 2px;
+    font-size: 12px;
+  }
+
+  .icon { font-size: 13px; flex-shrink: 0; }
+
+  .time-chip {
+    font-size: 11px;
+    background: var(--warm);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    padding: 0px 5px;
+    color: #5a5040;
+    white-space: nowrap;
+    margin-left: 3px;
+  }
+
+  td.summary-cell {
+    min-width: 200px;
+    max-width: 240px;
+    color: #2a2018;
+    line-height: 1.55;
+  }
+
+  td.services-cell {
+    min-width: 170px;
+    max-width: 200px;
+  }
+
+  .tag {
+    display: inline-block;
+    font-size: 10.5px;
+    padding: 1px 6px;
+    margin: 1px 2px 1px 0;
+    border-radius: 2px;
+    border: 1px solid var(--rule);
+    color: #4a4030;
+    background: #fff;
+    line-height: 1.6;
+  }
+
+  .tag.spec { background: #e8f0f8; border-color: #b0c8e0; color: var(--accent2); }
+
+  td.cost-cell {
+    min-width: 160px;
+    max-width: 200px;
+    font-size: 12.5px;
+    line-height: 1.6;
+  }
+
+  .cost-main {
+    font-weight: 600;
+    font-size: 13.5px;
+    color: var(--ink);
+  }
+
+  .cost-note {
+    font-size: 11px;
+    color: #6b6050;
+    font-weight: 300;
+    line-height: 1.4;
+    margin-top: 2px;
+  }
+
+  .rating {
+    font-size: 11px;
+    color: #8b7350;
+    margin-top: 3px;
+  }
+
+  .stars { color: #c8901a; }
+
+  tr.public-row { border-left: 3px solid var(--public); }
+  tr.private-row { border-left: 3px solid var(--private); }
+
+  .no-results {
+    text-align: center;
+    padding: 50px 0;
+    color: #8b7a60;
+    font-size: 15px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 20px 40px;
+    font-size: 11px;
+    color: #8b7a60;
+    border-top: 1px solid var(--rule);
+    background: var(--warm);
+  }
+
+  @media (max-width: 768px) {
+    header, .controls, .table-wrap { padding-left: 16px; padding-right: 16px; }
+    header h1 { font-size: 20px; }
+  }
+
+  /* ── MAP SECTION ── */
+  .map-section {
+    padding: 0 40px 60px;
+  }
+
+  .map-section h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 4px;
+    padding-top: 10px;
+  }
+
+  .map-section p.map-note {
+    font-size: 11.5px;
+    color: #8b7a60;
+    margin-bottom: 14px;
+  }
+
+  .map-legend {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 10px;
+    font-size: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .map-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .legend-circle {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    border: 2px solid rgba(0,0,0,0.3);
+    flex-shrink: 0;
+  }
+
+  #map {
+    height: 620px;
+    border-radius: 4px;
+    border: 1px solid var(--rule);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+
+  /* Leaflet popup override */
+  .leaflet-popup-content-wrapper {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 12.5px;
+    border-radius: 4px;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.15);
+  }
+
+  .leaflet-popup-content {
+    margin: 12px 14px;
+    line-height: 1.55;
+  }
+
+  .popup-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 3px;
+  }
+
+  .popup-address {
+    font-size: 11px;
+    color: #6b6050;
+    margin-bottom: 6px;
+  }
+
+  .popup-type-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-bottom: 5px;
+  }
+
+  .popup-public { background: #d8f0e5; color: #2d6a4f; border: 1px solid #b0d8c0; }
+  .popup-private { background: #f5e2d8; color: #6b3a2a; border: 1px solid #d8b8a8; }
+
+  .popup-services {
+    font-size: 11px;
+    color: #3a3028;
+    margin-top: 4px;
+  }
+
+  .popup-rating {
+    font-size: 11px;
+    color: #8b7350;
+    margin-top: 4px;
+  }
+
+  .popup-link {
+    display: inline-block;
+    margin-top: 6px;
+    font-size: 11px;
+    color: #3c5e8b;
+    text-decoration: none;
+    border-bottom: 1px solid #b0c8e0;
+  }
+
+  .map-filter-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .map-filter-btn {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 11.5px;
+    padding: 5px 12px;
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    background: #fff;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.15s;
+    color: var(--ink);
+  }
+
+  .map-filter-btn:hover { background: var(--warm); }
+  .map-filter-btn.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+
+  @media (max-width: 768px) {
+    .map-section { padding-left: 16px; padding-right: 16px; }
+    #map { height: 420px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Domovy pro seniory – Praha a okolí</h1>
+  <p>Veřejné a soukromé poskytovatele pobytových sociálních služeb</p>
+  <div class="legend-bar">
+    <span><span class="legend-dot" style="background:#2d6a4f"></span>Veřejný (hl. m. Praha / MČ)</span>
+    <span><span class="legend-dot" style="background:#6b3a2a"></span>Soukromý</span>
+    <span style="color:#b0a898">· Doprava z centra: reference Václavské náměstí/Muzeum · Ceny veřejných jsou regulované zákonem 108/2006 Sb.</span>
+  </div>
+</header>
+
+<div class="controls">
+  <label>Hledat:</label>
+  <input type="text" id="searchInput" placeholder="název, adresa, služba…">
+  <label>Typ:</label>
+  <select id="typeFilter">
+    <option value="all">Vše</option>
+    <option value="public">Veřejné</option>
+    <option value="private">Soukromé</option>
+  </select>
+  <label>Oblast:</label>
+  <select id="areaFilter">
+    <option value="all">Vše</option>
+    <option value="Praha">Praha (centrum a okolí)</option>
+    <option value="okolí">Mimo Prahu / Okolí</option>
+  </select>
+  <span class="count-badge" id="countBadge">46 záznamů</span>
+</div>
+
+<div class="table-wrap">
+<table id="mainTable">
+<thead>
+  <tr>
+    <th data-col="0">Název / Adresa</th>
+    <th data-col="1">Typ</th>
+    <th data-col="2">Doprava z centra</th>
+    <th data-col="3">Přehled / Shrnutí</th>
+    <th data-col="4">Nabízené služby</th>
+    <th data-col="5">Náklady / Ceny</th>
+  </tr>
+</thead>
+<tbody id="tableBody">
+</tbody>
+</table>
+<div class="no-results" id="noResults" style="display:none">Žádné záznamy neodpovídají filtru.</div>
+</div>
+
+<footer>Zdroje: weby jednotlivých zařízení, MHD Praha (PID), zákon č. 108/2006 Sb. o sociálních službách · Ceny aktuální dle dostupných informací k datu zpracování (březen 2026) · Soukromé ceny jsou orientační, vždy ověřte přímo se zařízením.</footer>
+
+<!-- ── MAP SECTION ── -->
+<div class="map-section">
+  <h2>Mapa zařízení</h2>
+  <p class="map-note">Kliknutím na marker zobrazíte detail zařízení · Barva = typ (zelená = veřejný, hnědočervená = soukromý)</p>
+  <div class="map-legend">
+    <div class="map-legend-item"><span class="legend-circle" style="background:#2d6a4f"></span>Veřejný (hl. m. Praha / MČ)</div>
+    <div class="map-legend-item"><span class="legend-circle" style="background:#8b5e3c"></span>Soukromý</div>
+  </div>
+  <div class="map-filter-bar">
+    <span style="font-size:11.5px;color:#5a5040;font-weight:500;text-transform:uppercase;letter-spacing:0.4px">Zobrazit:</span>
+    <button class="map-filter-btn active" id="mapBtnAll" onclick="mapFilter('all')">Vše</button>
+    <button class="map-filter-btn" id="mapBtnPublic" onclick="mapFilter('public')">Veřejné</button>
+    <button class="map-filter-btn" id="mapBtnPrivate" onclick="mapFilter('private')">Soukromé</button>
+    <button class="map-filter-btn" id="mapBtnPraha" onclick="mapFilter('Praha')">Praha</button>
+    <button class="map-filter-btn" id="mapBtnOkoli" onclick="mapFilter('okoli')">Mimo Prahu</button>
+  </div>
+  <div id="map"></div>
+</div>
+
+<script>
+const DATA = [
+  // ── VEŘEJNÉ ──
+  {
+    name: "DS Krč",
+    url: "https://domovsenioru-sulicka.cz/",
+    address: "Sulická 1085, Praha 4 – Krč",
+    type: "public", area: "Praha", lat: 50.0274, lng: 14.4455,
+    rating: 3.8,
+    reviews: 13,
+    transport: [
+      {icon:"🚌", text:"Bus 192/193 nebo tram 18/21 Budějovická", time:"~30 min"},
+      {icon:"🚇", text:"Metro C Budějovická + bus", time:"30–35 min"}
+    ],
+    summary: "PO hl. m. Prahy. 152 lůžek (8 dvoulůžkových, zbytek jednolůžkové). Klidná lokalita na okraji Velkého háje mezi Braníkem a Krčí. Vybudován 1963, nepřetržitý 24h provoz. Základní péče, ubytování a stravování.",
+    services: ["DPS", "24h péče", "Ubytování", "Stravování", "Aktivizace", "Odlehčovací služba"],
+    specialServices: [],
+    cost: { main: "~8–10 000 Kč/měs (ubytování)", note: "Stravování ~255 Kč/den\nRegulováno zák. 108/2006\nZbytek hradí klient z důchodu + PnP" }
+  },
+  {
+    name: "DS Chodov",
+    url: "https://www.seniordomov.cz",
+    address: "Donovalská 2222, Praha 4 – Chodov",
+    type: "public", area: "Praha", lat: 50.0367, lng: 14.5065,
+    rating: 4.5,
+    reviews: 236,
+    transport: [
+      {icon:"🚇", text:"Metro C → Chodov", time:"~20 min"},
+      {icon:"🚌", text:"Bus 197/126/170 zastávka Donovalská", time:"~3 min pěšky"}
+    ],
+    summary: "PO hl. m. Prahy. 260 lůžek (budovy A, B, D). Bezbariérový areál s atriiem, zahradou a altánkem. Zřizovatel: hl. m. Praha. Seniory 65+. Psychoterapie, logopedie, bazální stimulace, paliativní péče. Otevřeno veřejnosti – kavárna, výstavy.",
+    services: ["DPS (260 míst)", "24h péče", "Zdravotní péče 2×/týden", "Logopedie", "Psychoterapie", "Bazální stimulace", "Paliativní péče", "Aktivizace ART"],
+    specialServices: ["Logopedie", "Psychoterapie", "Bazální stimulace"],
+    cost: { main: "8 370 – 9 455 Kč/měs", note: "Stravování 255 Kč/den\n(dle typu pokoje, platné od 3/2026)" }
+  },
+  {
+    name: "DS Háje",
+    url: "https://www.dshaje.cz",
+    address: "K Milíčovu 734/1, Praha 4 – Háje",
+    type: "public", area: "Praha", lat: 50.0289, lng: 14.5360,
+    rating: 4.5,
+    reviews: 24,
+    transport: [
+      {icon:"🚇", text:"Metro C → Háje (konečná)", time:"~25 min"},
+      {icon:"🚶", text:"Pěšky od metra", time:"~15 min"}
+    ],
+    summary: "PO hl. m. Prahy, od 1994. 173 lůžek. Pro seniory 65+ a chronicky nemocné od 50 let (neurodegenerativní onemocnění). Kavárna, ZOO koutek, relaxační zóna s kaplí, společenský sál, zahrada u Milíčovského lesa a rybníků. Denní stacionář Parkinson.",
+    services: ["DPS (173 míst)", "24h péče", "Fyzioterapie", "Kadeřnictví", "Kavárna", "Pedikúra", "Aktivizace", "Stacionář Parkinson", "Odlehčovací služba"],
+    specialServices: ["Parkinson program"],
+    cost: { main: "~8–10 000 Kč/měs", note: "Regulováno zák. 108/2006\nStravování ~255 Kč/den" }
+  },
+  {
+    name: "Palata",
+    url: "https://palata.cz",
+    address: "Na Hřebenkách 737/5, Praha 5 – Smíchov",
+    type: "public", area: "Praha", lat: 50.0757, lng: 14.3855,
+    rating: 4.7,
+    reviews: 161,
+    transport: [
+      {icon:"🚋", text:"Tram 4/9/10 → Kavalírka", time:"~25 min"},
+      {icon:"🚶", text:"Pěšky od tramvaje", time:"~10 min"}
+    ],
+    summary: "PO hl. m. Prahy. SPECIALIZACE: výhradně zrakově postižení a nevidomí senioři. Historický areál s anglickým parkem a japonským rybníkem, zvířata. Výuka PC, doprovod. Kapacita ~200 míst. Vysoké hodnocení (4.7★/161 recenzí).",
+    services: ["DPS pro zrakově postižené", "24h péče", "Výuka PC", "Logopedie", "Aktivizace", "Doprovod", "Kulturní program"],
+    specialServices: ["Pouze zrakově postižení/nevidomí"],
+    cost: { main: "~8–10 000 Kč/měs", note: "Regulováno zák. 108/2006\n(pouze pro zrakově postižené)" }
+  },
+  {
+    name: "DS Elišky Purkyňové",
+    url: "http://www.ddpraha6.cz",
+    address: "Cvičebná 2442/9, Praha 6 – Břevnov",
+    type: "public", area: "Praha", lat: 50.0867, lng: 14.3682,
+    rating: 4.4,
+    reviews: 7,
+    transport: [
+      {icon:"🚌", text:"Bus 108/174/180 → Větrník", time:"~35 min"},
+      {icon:"🚋", text:"Tram 1/2/18/25 → Vypich + bus", time:"~30 min"}
+    ],
+    summary: "PO hl. m. Prahy. Dva objekty: Cvičebná (Břevnov) a Thákurova (Dejvice). DPS + odlehčovací služba. Odděl. se zvláštním režimem bylo zrušeno. Blízkost Stromovky a Divoké Šárky. Průvodce soc. službami pro seniory.",
+    services: ["DPS", "Odlehčovací služba", "Aktivizace", "Dobrovolnictví", "Sociální poradenství"],
+    specialServices: [],
+    cost: { main: "~8–10 000 Kč/měs", note: "Regulováno zák. 108/2006" }
+  },
+  {
+    name: "DS Kobylisy",
+    url: "https://dskobylisy.cz",
+    address: "Mirovická 19/1027, Praha 8 – Kobylisy",
+    type: "public", area: "Praha", lat: 50.1293, lng: 14.4461,
+    rating: 4.7,
+    reviews: 3,
+    transport: [
+      {icon:"🚇", text:"Metro C → Kobylisy + bus/pěšky", time:"~30 min"},
+      {icon:"🚌", text:"Bus 144/170/177", time:"~10 min od metra"}
+    ],
+    summary: "PO hl. m. Prahy. VÝHRADNĚ Domov se zvláštním režimem (Alzheimer, demence). 3 propojené budovy u Čimického háje se zahradou. Specializovaný personál, bezpečné prostředí pro klienty s DZR. Rehabilitace.",
+    services: ["DZR – Alzheimer/demence", "24h specializovaná péče", "Rehabilitace", "Aktivizace", "Sociální poradenství"],
+    specialServices: ["Alzheimer", "Demence"],
+    cost: { main: "~8–10 000 Kč/měs", note: "Regulováno zák. 108/2006\nDZR – zvýšená péče" }
+  },
+  {
+    name: "DS Sluneční – Bohnice",
+    url: "http://www.novaslunecnice.cz",
+    address: "Na Hranicích 674/18, Praha 8 – Bohnice",
+    type: "public", area: "Praha", lat: 50.1341, lng: 14.4332,
+    rating: 4.0,
+    reviews: 11,
+    transport: [
+      {icon:"🚇", text:"Metro C → Kobylisy + bus 102/202", time:"~40 min"},
+      {icon:"🚌", text:"Bus 175/202 Bohnice", time:"~15 min od metra"}
+    ],
+    summary: "PO hl. m. Prahy. Architektonicky unikátní budova u Čimického háje a Bohnic. 24h péče, zahrada, přítomnost mazlíčků (psi). Kulturní program, aktivizace.",
+    services: ["DPS", "24h péče", "Aktivizace", "Kulturní program", "Zahrada"],
+    specialServices: [],
+    cost: { main: "~8–10 000 Kč/měs", note: "Regulováno zák. 108/2006" }
+  },
+  {
+    name: "DS Ďáblice",
+    url: "http://www.ddablice.cz",
+    address: "Kubíkova 1698/11, Praha 8 – Ďáblice",
+    type: "public", area: "Praha", lat: 50.1363, lng: 14.4738,
+    rating: 4.2,
+    reviews: 15,
+    transport: [
+      {icon:"🚇", text:"Metro C → Ládví + bus 202/310", time:"~30 min"},
+      {icon:"🚌", text:"~10 min od metra Ládví", time:""}
+    ],
+    summary: "PO hl. m. Prahy. U Ďáblického háje, klidná neprůjezdná lokalita, rozlehlé parkoviště. DPS + odd. se zvláštním režimem. Bezbariérový areál, cukrárna, nákupní centrum v blízkosti. Mezigenerační spolupráce se školami.",
+    services: ["DPS", "DZR", "24h péče", "Aktivizace", "Zahrada", "Kulturní program"],
+    specialServices: [],
+    cost: { main: "~8–10 000 Kč/měs", note: "Regulováno zák. 108/2006" }
+  },
+  {
+    name: "DS Zahradní Město",
+    url: "http://www.dszm.cz",
+    address: "Sněženková 2973/8, Praha 10 – Zahradní Město",
+    type: "public", area: "Praha", lat: 50.0547, lng: 14.5018,
+    rating: 4.2,
+    reviews: 25,
+    transport: [
+      {icon:"🚇", text:"Metro A → Strašnická + bus 135/175", time:"~30 min"},
+      {icon:"🚌", text:"Bus 135 zastavuje blízko", time:"~5 min od metra"}
+    ],
+    summary: "PO hl. m. Prahy. DPS + DZR + odlehčovací služba. Velký komplex se zahradou. Zdravotní a ošetřovatelská péče, aktivizace, sociální podpora. Fakultativní služby.",
+    services: ["DPS", "DZR", "Odlehčovací služba", "24h ošetřovatelská péče", "Aktivizace", "Fyzioterapie", "Stravování"],
+    specialServices: ["DZR"],
+    cost: { main: "~8–10 000 Kč/měs", note: "Regulováno zák. 108/2006" }
+  },
+  {
+    name: "DS Malešice",
+    url: "http://www.malesiceds.cz",
+    address: "Rektorská 577, Praha 10 – Malešice",
+    type: "public", area: "Praha", lat: 50.0874, lng: 14.5051,
+    rating: 2.8,
+    reviews: 14,
+    transport: [
+      {icon:"🚇", text:"Metro A → Depo Hostivař + bus 154", time:"~35 min"},
+      {icon:"🚌", text:"Bus 135/175 ze Strašnické", time:"~15 min"}
+    ],
+    summary: "PO hl. m. Prahy. DPS + Alzheimer centrum (zvláštní režim). Impresivní areál navržený arch. Miluničem (Dancing House). Sbírka soch. Paliativní péče. Pozor – recenze jsou smíšené, negativní zkušenosti s péčí.",
+    services: ["DPS", "Alzheimer centrum (DZR)", "Zdravotní péče", "Paliativní péče", "Aktivizace", "Doplňkové služby"],
+    specialServices: ["Alzheimer centrum"],
+    cost: { main: "~8–10 000 Kč/měs", note: "Regulováno zák. 108/2006" }
+  },
+  {
+    name: "Domov Dobřichovice",
+    url: "http://www.domovdobrichovice.cz",
+    address: "Brunšov 365, 252 31 Všenory",
+    type: "public", area: "okolí", lat: 49.9248, lng: 14.2924,
+    rating: 4.4,
+    reviews: 5,
+    transport: [
+      {icon:"🚂", text:"Vlak S6/S7 Smíchov → st. Dobřichovice", time:"~35 min"},
+      {icon:"🚌", text:"Pak pěšky nebo bus", time:"~10 min od stanice"}
+    ],
+    summary: "PO hl. m. Prahy, mimo Prahu. DPS u Berounky v Brunšově (Dobřichovice). Bezbariérový areál, zahrada. Klidná přírodní lokalita, procházky u řeky. Online podání žádosti. Virtuální asistent.",
+    services: ["DPS", "Ubytování", "Stravování", "Zdravotní péče", "Aktivizace", "Sociální podpora"],
+    specialServices: [],
+    cost: { main: "~8–10 000 Kč/měs", note: "Regulováno zák. 108/2006" }
+  },
+  {
+    name: "DS Hortenzie",
+    url: "http://www.hortenzie.cz",
+    address: "Bořanovice-Pakoměřice 65, 250 65 Líbezníce",
+    type: "public", area: "okolí", lat: 50.1791, lng: 14.4822,
+    rating: 4.2,
+    reviews: 5,
+    transport: [
+      {icon:"🚇", text:"Metro C → Letňany + bus 359/361", time:"~45 min"},
+      {icon:"🚌", text:"~20 min od metra Letňany", time:""}
+    ],
+    summary: "PO hl. m. Prahy. Malebný domov v zelené obci severně od Prahy (Líbezníce). Certifikace bazální stimulace, čestné uznání Dobrá duše. Blízko přírody.",
+    services: ["DPS", "Zdravotní a ošetřovatelská péče", "Bazální stimulace", "Aktivizace", "Sociálně terapeutické činnosti"],
+    specialServices: ["Bazální stimulace"],
+    cost: { main: "~8–10 000 Kč/měs", note: "Regulováno zák. 108/2006" }
+  },
+  {
+    name: "Domov Heřmanův Městec",
+    url: "https://www.domov-hm.cz",
+    address: "Masarykovo nám. 37, 538 03 Heřmanův Městec",
+    type: "public", area: "okolí", lat: 49.9454, lng: 15.6694,
+    rating: 5.0,
+    reviews: 1,
+    transport: [
+      {icon:"🚂", text:"Vlak Praha hl.n. → Chrudim/HM", time:"~1,5–2 hod"},
+      {icon:"🚌", text:"Autobus z Pardubic/Chrudimi", time:""}
+    ],
+    summary: "PO hl. m. Prahy. Historická renesanční budova (1591) na Masarykově náměstí v HM. 103 pokojů. Rozlehlý park s cestičkami a lavičkami. Velmi vzdálené od Prahy – vhodné pro klienty z regionu.",
+    services: ["DPS", "Ubytování", "Stravování", "Péče", "Kulturní program", "Park"],
+    specialServices: [],
+    cost: { main: "~8–10 000 Kč/měs", note: "Regulováno zák. 108/2006" }
+  },
+  {
+    name: "DS Pyšely (DS Chodov)",
+    url: "https://www.dspysely.cz",
+    address: "Náměstí T. G. Masaryka 1, 251 67 Pyšely",
+    type: "public", area: "okolí", lat: 49.8767, lng: 14.6784,
+    rating: 4.6,
+    reviews: 5,
+    transport: [
+      {icon:"🚌", text:"Bus 363 metro C Opatov/Chodov", time:"~50 min"},
+      {icon:"🚌", text:"Přestup v Benešov nebo Sázava", time:""}
+    ],
+    summary: "PO hl. m. Prahy – pracoviště DS Chodov. Klidné maloměsto u Sázavy. Kapacita v rámci celkových 295 míst DS Chodov. 2–3-lůžkové pokoje, zahrady, náměstí v blízkosti.",
+    services: ["DPS", "24h péče", "Ubytování", "Stravování", "Aktivizace"],
+    specialServices: [],
+    cost: { main: "7 750 – 8 060 Kč/měs", note: "Stravování 255 Kč/den\n(dle DS Chodov ceníku od 3/2026)" }
+  },
+  {
+    name: "DS Jihoměstská soc. a.s.",
+    url: "http://www.jmsoc.cz",
+    address: "Janouchova 670/1, Praha 4 – Háje (Praha 11)",
+    type: "public", area: "Praha", lat: 50.0313, lng: 14.5362,
+    rating: 4.4,
+    reviews: 45,
+    transport: [
+      {icon:"🚇", text:"Metro C → Háje", time:"~25 min"},
+      {icon:"🚶", text:"5–10 min pěšky od metra", time:""}
+    ],
+    summary: "Akciová společnost (veřejnoprávní charakter). DPS na Jižním Městě. Paliativní péče, hospicový přístup. Dobré komunikace s rodinou. 4.4★ na Google.",
+    services: ["DPS", "Paliativní péče", "24h péče", "Ošetřovatelská péče", "Sociální práce"],
+    specialServices: ["Paliativní péče"],
+    cost: { main: "~8–10 000 Kč/měs", note: "Regulováno zák. 108/2006" }
+  },
+  {
+    name: "CSOP Praha 10 – Zvonková",
+    url: "http://www.csop10.cz",
+    address: "Zvonková 6, Praha 10 – Záběhlice",
+    type: "public", area: "Praha", lat: 50.0551, lng: 14.5053,
+    rating: 4.2,
+    reviews: 5,
+    transport: [
+      {icon:"🚇", text:"Metro A → Strašnická + bus", time:"~35 min"},
+      {icon:"🚌", text:"Bus 135/175/135 Záběhlice", time:"~10 min od metra"}
+    ],
+    summary: "PO MČ Praha 10. Součást CSOP – 3 pobytové objekty v Praze 10. DPS + DZR. Terénní a ambulantní služby, pečovatelská služba, dětské skupiny, půjčovna kompenzačních pomůcek.",
+    services: ["DPS", "DZR", "Odlehčovací služba", "Terénní péče", "Pečovatelská služba", "Kompenzační pomůcky"],
+    specialServices: ["DZR"],
+    cost: { main: "~8–10 000 Kč/měs", note: "Regulováno zák. 108/2006" }
+  },
+  {
+    name: "CSOP Praha 10 – Vršovický zámeček",
+    url: "http://www.csop10.cz",
+    address: "Moskevská 21, Praha 10 – Vršovice",
+    type: "public", area: "Praha", lat: 50.0700, lng: 14.4521,
+    rating: 4.6,
+    reviews: 108,
+    transport: [
+      {icon:"🚋", text:"Tram 6/22 → Čechovo náměstí", time:"~25 min"},
+      {icon:"🚌", text:"Bus 139/156/175 Vršovice", time:""}
+    ],
+    summary: "PO MČ Praha 10. Historická vila – zámek ve Vršovicích. DPS + DZR. Oblíbeno pro kulturní akce a svatby. 4.6★ (108 recenzí). Příjemné historické prostředí.",
+    services: ["DPS", "DZR", "Terénní péče", "Ambulantní služby", "Kulturní program"],
+    specialServices: ["DZR"],
+    cost: { main: "~8–10 000 Kč/měs", note: "Regulováno zák. 108/2006" }
+  },
+  {
+    name: "CSOP Praha 10 – U Vršovického nádraží",
+    url: "http://www.csop10.cz",
+    address: "U Vršovického nádraží 1547/5, Praha 10",
+    type: "public", area: "Praha", lat: 50.0673, lng: 14.4485,
+    rating: 5.0,
+    reviews: 1,
+    transport: [
+      {icon:"🚋", text:"Tram 6/22/24 → Vršovické náměstí", time:"~25 min"},
+      {icon:"🚂", text:"Vlak Vršovice (200m)", time:""}
+    ],
+    summary: "PO MČ Praha 10. Bytový objekt s asistovanými službami pro seniory. Byty zvláštního určení – nájemní byty pro seniory a ZTP. Součást CSOP Praha 10.",
+    services: ["DPS", "Byty zvláštního určení", "Asistenční péče", "Sociální poradenství"],
+    specialServices: [],
+    cost: { main: "~8–10 000 Kč/měs", note: "Regulováno zák. 108/2006" }
+  },
+  {
+    name: "Domov Bethesda",
+    url: "https://cb.cz/diakonie/bethesda/",
+    address: "Stoliňská 41/2510, Praha 10 – Horní Počernice",
+    type: "public", area: "Praha", lat: 50.1077, lng: 14.5927,
+    rating: 4.5,
+    reviews: 2,
+    transport: [
+      {icon:"🚌", text:"Bus 244/290 z metra C Letňany", time:"~40 min"},
+      {icon:"🚌", text:"Bus 290 z metra B Černý Most", time:"~30 min"}
+    ],
+    summary: "Českobratrská církev evangelická – Diakonie. DPS s duchovním rozměrem. V sídlišti Horní Počernice na okraji Prahy. Křesťansky orientovaná péče, duchovní doprovod.",
+    services: ["DPS", "24h péče", "Duchovní péče", "Ubytování", "Stravování", "Sociální podpora"],
+    specialServices: ["Duchovní péče"],
+    cost: { main: "~8–10 000 Kč/měs", note: "Regulováno zák. 108/2006" }
+  },
+  {
+    name: "ČČK Praha 9 – Harrachovská",
+    url: "https://www.cckp9.cz",
+    address: "Harrachovská 422/2, Praha 9 – Prosek",
+    type: "public", area: "Praha", lat: 50.1252, lng: 14.4958,
+    rating: null,
+    reviews: 0,
+    transport: [
+      {icon:"🚇", text:"Metro B → Vysočanská/Hloubětín + bus", time:"~35 min"},
+      {icon:"🚌", text:"Bus 161/183 Prosek", time:"~10 min od metra"}
+    ],
+    summary: "Český červený kříž Praha 9. DPS + DZR na Proseku. Sociální péče, péče o seniory s demencí.",
+    services: ["DPS", "DZR", "Sociální péče", "24h péče"],
+    specialServices: ["DZR"],
+    cost: { main: "~8–10 000 Kč/měs", note: "Regulováno zák. 108/2006" }
+  },
+  {
+    name: "ČČK Praha 9 – Střížkov (Hejnická)",
+    url: "https://www.cckp9.cz",
+    address: "Hejnická 538/30, Praha 9 – Střížkov",
+    type: "public", area: "Praha", lat: 50.1190, lng: 14.4809,
+    rating: null,
+    reviews: 0,
+    transport: [
+      {icon:"🚇", text:"Metro C → Střížkov", time:"~20 min"},
+      {icon:"🚶", text:"~10 min pěšky od metra", time:""}
+    ],
+    summary: "Český červený kříž Praha 9, druhý objekt. DPS na Střížkově u metra C. Výborná dostupnost veřejnou dopravou.",
+    services: ["DPS", "Sociální péče", "24h péče", "Stravování"],
+    specialServices: [],
+    cost: { main: "~8–10 000 Kč/měs", note: "Regulováno zák. 108/2006" }
+  },
+
+  // ── SOUKROMÉ ──
+  {
+    name: "Domov Sue Ryder",
+    url: "https://www.sue-ryder.cz",
+    address: "Michelská 1/7, Praha 4 – Michle",
+    type: "private", area: "Praha", lat: 50.0538, lng: 14.4536,
+    rating: 4.7,
+    reviews: 6,
+    transport: [
+      {icon:"🚇", text:"Metro C → Budějovická + tram/bus", time:"~20 min"},
+      {icon:"🚌", text:"Bus 170/196/124 Michle", time:"~10 min od metra"}
+    ],
+    summary: "Nezisková org. (z.ú.), anglická tradice péče. DPS v Michli. Humanistický a individuální přístup. Dobrovolnický program, duchovní péče. Odlehčovací pobyty.",
+    services: ["DPS", "Ošetřovatelská péče", "Aktivizace", "Duchovní péče", "Sociální práce", "Odlehčovací pobyty", "Dobrovolnictví"],
+    specialServices: ["Duchovní péče"],
+    cost: { main: "Dle sazebníku", note: "Nezisková org., ceny nižší než komerce\nOvěřte přímo se zařízením" }
+  },
+  {
+    name: "Senevida Klamovka",
+    url: "https://www.senevida.cz/senevida-klamovka/",
+    address: "Jinonická 1317/1, Praha 5 – Košíře",
+    type: "private", area: "Praha", lat: 50.0703, lng: 14.3781,
+    rating: 4.1,
+    reviews: 24,
+    transport: [
+      {icon:"🚇", text:"Metro B → Jinonice", time:"~20 min"},
+      {icon:"🚶", text:"~10 min pěšky od metra", time:""}
+    ],
+    summary: "Soukromé (Penta/Senevida, dříve SeneCura). Komfortní zařízení v Košířích. Certifikace Vážka – Alzheimer Society. 24h péče, kavárna, zahrada. Součást velké sítě Senevida (54 zař., 6 400+ lůžek).",
+    services: ["DPS", "DZR (Alzheimer)", "24h zdravotní péče", "Rehabilitace", "Aktivizace", "Kavárna/restaurace"],
+    specialServices: ["Alzheimer", "Senevida síť"],
+    cost: { main: "~45–70 000 Kč/měs", note: "Soukromé zařízení – cena na vyžádání\nNelze kombinovat s PnP plně" }
+  },
+  {
+    name: "Senevida Slivenec",
+    url: "https://www.senevida.cz/senevida-slivenec/",
+    address: "Ke Smíchovu 1144/144, Praha 5 – Slivenec",
+    type: "private", area: "Praha", lat: 50.0200, lng: 14.3543,
+    rating: 5.0,
+    reviews: 23,
+    transport: [
+      {icon:"🚇", text:"Metro B → Jinonice + bus 129/243/248", time:"~35 min"},
+      {icon:"🚌", text:"Bus ze Zličínu", time:"~25 min"}
+    ],
+    summary: "Soukromé (Penta/Senevida). Moderní komplex u přírody, hodnocení 5★ (23 recenzí). Fyzioterapie, kadeřnictví, pedikúra, kaple, kavárna, zahrada s dvorkem. Výborná strava.",
+    services: ["DPS", "DZR", "24h péče", "Fyzioterapie", "Rehabilitace", "Aktivizace", "Kadeřnictví", "Pedikúra", "Kavárna", "Kaple"],
+    specialServices: ["Senevida síť"],
+    cost: { main: "~45–70 000 Kč/měs", note: "Soukromé – cena na vyžádání" }
+  },
+  {
+    name: "Senevida Štěrboholy",
+    url: "https://www.senevida.cz/senevida-sterboholy/",
+    address: "Kryšpínova 1, Praha 10 – Štěrboholy",
+    type: "private", area: "Praha", lat: 50.0656, lng: 14.5510,
+    rating: 3.7,
+    reviews: 32,
+    transport: [
+      {icon:"🚇", text:"Metro A → Depo Hostivař + bus 154", time:"~35 min"},
+      {icon:"🚌", text:"Bus 154 zastávka Štěrboholy", time:"~15 min od metra"}
+    ],
+    summary: "Soukromé (Penta/Senevida). DPS + DZR. Smíšené recenze (3.7★, stížnosti na počet personálu a péči). 24h provoz.",
+    services: ["DPS", "DZR", "24h péče", "Aktivizace", "Rehabilitace"],
+    specialServices: [],
+    cost: { main: "~45–70 000 Kč/měs", note: "Soukromé – cena na vyžádání" }
+  },
+  {
+    name: "Senior komplex Třebešín",
+    url: "http://www.senior-komplex.cz/domov-senioru-trebesin/",
+    address: "Nad Třebešínem III 3070/2, Praha 10 – Strašnice",
+    type: "private", area: "Praha", lat: 50.0841, lng: 14.4877,
+    rating: 4.6,
+    reviews: 98,
+    transport: [
+      {icon:"🚇", text:"Metro A → Strašnická + bus 154/163", time:"~30 min"},
+      {icon:"🚋", text:"Tram 7/26 → Práčská", time:"~10 min od metra"}
+    ],
+    summary: "Soukromé. DPS + DZR. 4.6★ (98 recenzí). Specializace na Alzheimer, Parkinson, PEG péči. Klidná lokalita u parku, altán, zahrada. Ochotný personál.",
+    services: ["DPS", "DZR (Alzheimer)", "PEG péče", "Parkinson péče", "24h péče", "Fyzioterapie", "Aktivizace"],
+    specialServices: ["Alzheimer", "Parkinson", "PEG péče"],
+    cost: { main: "Na vyžádání", note: "Viz ceník na senior-komplex.cz" }
+  },
+  {
+    name: "Senior komplex Šeberov",
+    url: "https://www.senior-komplex.cz/praha-seberov/",
+    address: "K Hrnčírům 1038, Praha 4 – Šeberov",
+    type: "private", area: "Praha", lat: 50.0126, lng: 14.5129,
+    rating: 4.9,
+    reviews: 30,
+    transport: [
+      {icon:"🚌", text:"Bus 197 z metra C Háje", time:"~40 min"},
+      {icon:"🚌", text:"~20 min od metra Háje", time:""}
+    ],
+    summary: "Soukromé. DPS + DZR + byty pro seniory. 4.9★ (30 recenzí). Klidná příroda jižní Praha, kavárna, terasa, zahrada s altánkem. Možnost pohybu v okolí.",
+    services: ["DPS", "DZR", "Byty pro seniory", "24h péče", "Rehabilitace", "Aktivizace", "Kavárna"],
+    specialServices: ["Byty pro seniory"],
+    cost: { main: "Na vyžádání", note: "Viz ceník na senior-komplex.cz" }
+  },
+  {
+    name: "Senior komplex Mělník",
+    url: "http://www.senior-komplex.cz/domov-senioru-melnik/",
+    address: "Bezručova 4095, 276 01 Mělník",
+    type: "private", area: "okolí", lat: 50.3574, lng: 14.4766,
+    rating: 4.5,
+    reviews: 26,
+    transport: [
+      {icon:"🚌", text:"Bus 350/351 z Florenc → Mělník", time:"~60 min"},
+      {icon:"🚂", text:"Vlak Praha–Mělník", time:"~60 min"}
+    ],
+    summary: "Soukromé. DPS + DZR + byty pro seniory. 4.5★. Bohaté aktivity (Oktoberfest, jarmarky). Zahrada, kavárna, rodinná atmosféra. Přijímá seniory z celé ČR.",
+    services: ["DPS", "DZR", "Byty pro seniory", "24h péče", "Fyzioterapie", "Aktivizace", "Kavárna"],
+    specialServices: [],
+    cost: { main: "Na vyžádání", note: "Viz ceník na senior-komplex.cz" }
+  },
+  {
+    name: "DS Vysočany",
+    url: "http://www.domov-senioru-praha.cz/",
+    address: "Bassova 32/14, Praha 9 – Vysočany",
+    type: "private", area: "Praha", lat: 50.1086, lng: 14.5000,
+    rating: 4.7,
+    reviews: 38,
+    transport: [
+      {icon:"🚇", text:"Metro B → Vysočanská", time:"~20 min"},
+      {icon:"🚶", text:"~200 m pěšky od metra", time:""}
+    ],
+    summary: "Soukromé (s.r.o., od 2012). 117 lůžek, 70 zaměstnanců. 4.7★. Specializace na Alzheimer/demenci, bazální stimulace. Výborná dostupnost od metra B. Průměrná čekací doba 1–3 měsíce.",
+    services: ["DPS", "DZR (Alzheimer)", "Bazální stimulace", "24h ošetřovatelská péče", "Aktivizace", "Stravování"],
+    specialServices: ["Alzheimer", "Bazální stimulace"],
+    cost: { main: "Na vyžádání", note: "Viz ceník na webu" }
+  },
+  {
+    name: "Dům u Agáty",
+    url: "http://www.dumuagaty.cz/",
+    address: "Rudoltická 1182/6a, Praha 5 – Řeporyje",
+    type: "private", area: "Praha", lat: 50.0338, lng: 14.3154,
+    rating: 5.0,
+    reviews: 4,
+    transport: [
+      {icon:"🚌", text:"Bus 225/260 z metra B Zličín/Jinonice", time:"~35 min"},
+      {icon:"🚌", text:"~25 min od metra Jinonice", time:""}
+    ],
+    summary: "Soukromé (s.r.o.). 47 lůžek. 5★. Moderní vila se zahradou, rodinná atmosféra. Krátkodobé i dlouhodobé pobyty (pobyt na zkoušku). Rehabilitace, 5 jídel/den. Pokoje s přístupem na zahradu/terasu.",
+    services: ["DPS (47 lůžek)", "Odlehčovací služba", "Pobyty na zkoušku", "Rehabilitace", "Aktivizace", "24h péče sester", "5 jídel/den"],
+    specialServices: ["Pobyty na zkoušku", "Krátkodobé pobyty"],
+    cost: { main: "od 2 200 Kč/den", note: "~66–80k Kč/měs hrubé\n~55 000 Kč po odečtení důchodu + PnP II. (orientační)" }
+  },
+  {
+    name: "Dům seniorů Michle",
+    url: "https://www.dumseniorumichle.cz/",
+    address: "Čapkova 400/13, Praha 4 – Michle",
+    type: "private", area: "Praha", lat: 50.0585, lng: 14.4533,
+    rating: 3.6,
+    reviews: 12,
+    transport: [
+      {icon:"🚇", text:"Metro C → Budějovická + tram/bus", time:"~20 min"},
+      {icon:"🚋", text:"Tram 4/6/22 → Michelská", time:"~25 min"}
+    ],
+    summary: "Soukromé (s.r.o., od 2010). DPS + odlehčovací služba + zdravotní ambulance v Michli. Dvě provozovny. Smíšené recenze (3.6★). Sbírka na rekonstrukci objektu.",
+    services: ["DPS", "Odlehčovací služba", "Zdravotní ambulance", "24h péče"],
+    specialServices: [],
+    cost: { main: "Na vyžádání", note: "Soukromé, viz web" }
+  },
+  {
+    name: "Domov Centrin Praha",
+    url: "https://www.centrin.cz/zarizeni-praha/",
+    address: "Libocká 271/1, Praha 6 – Liboc",
+    type: "private", area: "Praha", lat: 50.0852, lng: 14.3368,
+    rating: 3.9,
+    reviews: 11,
+    transport: [
+      {icon:"🚌", text:"Bus 191/255 z metra A Dejvická", time:"~30 min"},
+      {icon:"🚌", text:"Bus 108 zastávka Petřiny", time:"~20 min"}
+    ],
+    summary: "Soukromé. DPS specializovaný na Alzheimer, u obory Hvězda. Smíšené recenze (stížnosti na poplatky, stavba). Nová budova ve výstavbě. U Hvězdičky – výborná dostupnost do přírody.",
+    services: ["DPS (Alzheimer)", "24h péče", "Stravování", "Aktivizace"],
+    specialServices: ["Alzheimer"],
+    cost: { main: "Na vyžádání", note: "Soukromé, viz centrin.cz" }
+  },
+  {
+    name: "Domov Centrin Unhošť",
+    url: "https://centrin.cz/zarizeni-unhost",
+    address: "Tyršovo náměstí 211, 273 51 Unhošť",
+    type: "private", area: "okolí", lat: 50.0857, lng: 14.1274,
+    rating: 4.0,
+    reviews: 28,
+    transport: [
+      {icon:"🚌", text:"Bus 302 z metra A Zličín → Unhošť", time:"~50 min"},
+      {icon:"🚂", text:"Vlak Praha–Kladno st. Unhošť", time:"~45 min"}
+    ],
+    summary: "Soukromé (stejná skupina Centrin). DPS v historickém centru Unhošti. Smíšené recenze (negativní i pozitivní). Péče o Alzheimer klienty.",
+    services: ["DPS (Alzheimer)", "24h péče", "Stravování", "Aktivizace"],
+    specialServices: ["Alzheimer"],
+    cost: { main: "Na vyžádání", note: "Soukromé, viz centrin.cz" }
+  },
+  {
+    name: "DS Fénix Horoměřice",
+    url: "http://www.domovfenix.cz/",
+    address: "K Sanatoriu 661, 252 62 Horoměřice",
+    type: "private", area: "okolí", lat: 50.1169, lng: 14.3476,
+    rating: 4.6,
+    reviews: 45,
+    transport: [
+      {icon:"🚌", text:"Bus 307 z metra A Dejvická", time:"~35 min"},
+      {icon:"🚌", text:"~25 min jízdy od Dejvické", time:""}
+    ],
+    summary: "Soukromé (s.r.o.). 60 lůžek. DZR. 4.6★ (45 recenzí). Rodinná atmosféra, moderní vybavení EU standardů. Pravidelný lékař (1×/týden) + psychiatr (2×/měsíc). Muzikoterapie, arteterapie, canisterapie.",
+    services: ["DZR (60 lůžek)", "24h péče sester", "Stravování 5×/den", "Muzikoterapie", "Arteterapie", "Canisterapie", "Reminiscenční terapie", "Kadeřník", "Pedikúra"],
+    specialServices: ["DZR", "Canisterapie", "Muzikoterapie"],
+    cost: { main: "Na vyžádání", note: "Soukromé – kontaktujte domovfenix.cz" }
+  },
+  {
+    name: "Domov Třetího věku",
+    url: "https://dtvcentrum.cz/",
+    address: "Za Mototechnou 1114/4, Praha 5 – Stodůlky",
+    type: "private", area: "Praha", lat: 50.0581, lng: 14.3289,
+    rating: 4.4,
+    reviews: 37,
+    transport: [
+      {icon:"🚇", text:"Metro B → Stodůlky", time:"~25 min"},
+      {icon:"🚶", text:"~10 min pěšky od metra", time:""}
+    ],
+    summary: "Soukromé (s.r.o.). 110 lůžek: 55 sociálních + 55 zdravotních (LDN). DPS (43) + DZR (12) + následná zdravotní péče. 4.4★. Moderní budova se zahradou v Praze 13, zahrada s relaxační zónou, Vila Milena (nové zdravot. odd.).",
+    services: ["DPS (43 míst)", "DZR (12 míst)", "LDN/Zdravotní péče (55 lůžek)", "24h péče", "Rehabilitace", "Aktivizace", "Vila Milena"],
+    specialServices: ["LDN – zdravotní péče", "Unikátní social+zdravotní kombinace"],
+    cost: { main: "Na vyžádání", note: "Soukromé – LDN lůžka i pojišťovna" }
+  },
+  {
+    name: "DS Dřevčický park",
+    url: "http://www.drevcickypark.cz/",
+    address: "Dřevčice 15, 250 01 Dřevčice",
+    type: "private", area: "okolí", lat: 50.1675, lng: 14.6285,
+    rating: 4.1,
+    reviews: 60,
+    transport: [
+      {icon:"🚌", text:"Bus 302/389 z metra C Letňany/Florenc", time:"~40 min"},
+      {icon:"🚌", text:"Přes Brandýs nad Labem", time:""}
+    ],
+    summary: "Soukromé. DPS + DZR. 4.1★ (60 recenzí). Větší zařízení v obci Dřevčice SV od Prahy. Kavárna-restaurace, zahrada, kulturní program. Otevřeno 7/7.",
+    services: ["DPS", "DZR", "24h péče", "Rehabilitace", "Aktivizace", "Kavárna/restaurace"],
+    specialServices: [],
+    cost: { main: "Na vyžádání", note: "Soukromé – viz drevcickypark.cz" }
+  },
+  {
+    name: "Centrum péče Doubrava",
+    url: "http://www.centrumpece.cz/",
+    address: "Nebeská 292, 282 01 Doubravčice",
+    type: "private", area: "okolí", lat: 50.0140, lng: 14.7881,
+    rating: 4.4,
+    reviews: 13,
+    transport: [
+      {icon:"🚌", text:"Bus → Český Brod z Florenc + bus", time:"~75 min"},
+      {icon:"🚂", text:"Vlak Praha–Kolín, st. Č. Brod + bus", time:"~70 min"}
+    ],
+    summary: "Soukromé. DPS + DZR. 4.4★ (13 recenzí). Venkovské prostředí u Doubravčic. Vysoce chválená péče – imobilní klienti zlepšeni, zdravotní a aktivizační péče. Mimo dosah MHD.",
+    services: ["DPS", "DZR", "24h péče", "Rehabilitace", "Aktivizace", "Zdravotní péče"],
+    specialServices: [],
+    cost: { main: "Na vyžádání", note: "Soukromé – viz centrumpece.cz" }
+  },
+  {
+    name: "DS Vlčí Pole",
+    url: "http://www.dsvlcipole.cz/",
+    address: "Vlčí Pole 5, 294 04 Dolní Bousov",
+    type: "private", area: "okolí", lat: 50.4142, lng: 15.1382,
+    rating: 5.0,
+    reviews: 1,
+    transport: [
+      {icon:"🚂", text:"Vlak Praha → Mladá Boleslav", time:"~2 hod"},
+      {icon:"🚗", text:"Auto doporučeno", time:""}
+    ],
+    summary: "Soukromé (s.r.o.). DPS ve venkovském statku, kraj Mladoboleslavský. Velmi vzdálené od Prahy (2+ hod.). Vhodné pro klienty z regionu nebo rodiny bez dopravních nároků.",
+    services: ["DPS", "Péče", "Ubytování", "Stravování"],
+    specialServices: [],
+    cost: { main: "Na vyžádání", note: "Velmi vzdálené od Prahy" }
+  },
+  {
+    name: "Dům seniorů Marta – Říčany",
+    url: "https://www.seniordummarta.cz/",
+    address: "Černokostelecká 326/25, 251 01 Říčany",
+    type: "private", area: "okolí", lat: 49.9996, lng: 14.6669,
+    rating: 4.4,
+    reviews: 8,
+    transport: [
+      {icon:"🚌", text:"Bus 363/381 z metra A Depo Hostivař", time:"~45 min"},
+      {icon:"🚌", text:"Přímé linky do Říčan", time:""}
+    ],
+    summary: "Soukromé. DPS v Říčanech u Prahy. 4.4★. Každý pokoj s vlastní koupelnou. Milý a ochotný personál, moderní prostředí. Citováno jako cenově přijatelné pro region.",
+    services: ["DPS", "24h péče", "Aktivizace", "Ubytování s koupelnou", "Stravování"],
+    specialServices: [],
+    cost: { main: "Na vyžádání", note: "Soukromé – viz seniordummarta.cz" }
+  },
+  {
+    name: "Senevida Říčany (DS Říčany–Voděrádky)",
+    url: "https://www.senevida.cz/senevida-ricany/",
+    address: "Krabošická 84, Říčany–Voděrádky",
+    type: "private", area: "okolí", lat: 49.9800, lng: 14.6366,
+    rating: 4.0,
+    reviews: 12,
+    transport: [
+      {icon:"🚌", text:"Bus 363/381 z metra A Depo Hostivař", time:"~45 min"},
+      {icon:"🚌", text:"Zastávka Voděrádky", time:"~5 min"}
+    ],
+    summary: "Soukromé (nyní Senevida/Penta). DPS + DZR v obci Voděrádky u Říčan. 4★. Moderní zařízení, chválen přístup personálu a komunikace s rodinou.",
+    services: ["DPS", "DZR", "24h péče", "Aktivizace", "Rehabilitace"],
+    specialServices: ["Senevida síť"],
+    cost: { main: "~45–70 000 Kč/měs", note: "Senevida – cena na vyžádání" }
+  },
+  {
+    name: "Centrum Clementas – Mlékovice",
+    url: "https://clementas.cz/domovy/clementas-mlekovice/",
+    address: "Mlékovice 66, 281 44 Toušov",
+    type: "private", area: "okolí", lat: 49.9802, lng: 15.0241,
+    rating: 4.3,
+    reviews: 40,
+    transport: [
+      {icon:"🚌", text:"Bus z Prahy přes Říčany/Č. Brod", time:"~80–90 min"},
+      {icon:"🚗", text:"Auto doporučeno", time:""}
+    ],
+    summary: "Soukromé. DPS + DZR (Alzheimer). 4.3★ (40 recenzí). Venkovské prostředí u Zásmuk. Zdravotní a sociální péče, aktivizace. Vzdálené od Prahy, vhodné pro klienty z okolí Kolína.",
+    services: ["DPS", "DZR (Alzheimer)", "24h péče", "Zdravotní péče", "Aktivizace", "Stravování"],
+    specialServices: ["Alzheimer"],
+    cost: { main: "Na vyžádání", note: "Soukromé – viz clementas.cz" }
+  },
+  {
+    name: "Domov Zátiší – Úvaly",
+    url: "https://www.domov-zatisi.cz/",
+    address: "Modřínova 1522, 250 82 Úvaly",
+    type: "private", area: "okolí", lat: 50.0884, lng: 14.7173,
+    rating: null,
+    reviews: 0,
+    transport: [
+      {icon:"🚂", text:"Vlak S9/R9 z Masarykova nádraží → Úvaly", time:"~40 min"},
+      {icon:"🚌", text:"Pak pěšky nebo bus", time:""}
+    ],
+    summary: "Soukromé (s.r.o.). DPS v Úvalech u Prahy. Dostupné vlakem. 24h provoz.",
+    services: ["DPS", "24h péče", "Ubytování", "Stravování", "Sociální péče"],
+    specialServices: [],
+    cost: { main: "Na vyžádání", note: "Soukromé – viz domov-zatisi.cz" }
+  },
+  {
+    name: "Domov Maják – Příbram",
+    url: "http://www.domov-majak.cz/",
+    address: "Brodská 140, 261 01 Příbram",
+    type: "private", area: "okolí", lat: 49.6696, lng: 13.9964,
+    rating: 3.7,
+    reviews: 7,
+    transport: [
+      {icon:"🚂", text:"Vlak Praha hl.n. → Příbram", time:"~80–90 min"},
+      {icon:"🚌", text:"Autobus z Prahy Na Knížecí", time:"~80 min"}
+    ],
+    summary: "Soukromé (o.p.s.). DPS v Příbrami. 3.7★. Vzdálené od Prahy, vhodné pro Příbramský region. Profesionální, ochotný personál.",
+    services: ["DPS", "24h péče", "Ubytování", "Stravování"],
+    specialServices: [],
+    cost: { main: "Na vyžádání", note: "Soukromé – viz domov-majak.cz" }
+  },
+  {
+    name: "Senlife Mělník",
+    url: "https://www.senlife.cz/",
+    address: "Českolipská 1111/19, 276 01 Mělník",
+    type: "private", area: "okolí", lat: 50.3625, lng: 14.4672,
+    rating: 5.0,
+    reviews: 24,
+    transport: [
+      {icon:"🚌", text:"Bus 350/351/357 z Florenc → Mělník", time:"~60 min"},
+      {icon:"🚂", text:"Vlak Praha–Mělník", time:"~60 min"}
+    ],
+    summary: "Soukromé. DPS v Mělníku. 5★ (24 recenzí). Vysoce chválená péče o imobilní a post-CMP klienty. Rehabilitace, aktivizace, výborná strava. Přijímá klienty i s těžkými diagnózami.",
+    services: ["DPS", "24h péče", "Rehabilitace (post-CMP)", "Aktivizace", "Nutriční péče", "Stravování"],
+    specialServices: ["Post-CMP péče", "Těžká imobilita"],
+    cost: { main: "Na vyžádání", note: "Soukromé – viz senlife.cz\nCeny dle péče, 50–100k/měs orientačně" }
+  },
+  {
+    name: "Domov Borová – Trnová",
+    url: "http://www.domovborova.cz/",
+    address: "Trnová 272, 252 10 Trnová",
+    type: "private", area: "okolí", lat: 49.9174, lng: 14.3486,
+    rating: 4.5,
+    reviews: 14,
+    transport: [
+      {icon:"🚂", text:"Vlak S7 Smíchov → Dobřichovice + bus/taxi", time:"~50 min"},
+      {icon:"🚌", text:"Bus 302/303 z metra B Zličín", time:"~45 min"}
+    ],
+    summary: "Soukromé. DPS u Dobřichovic. 4.5★. Čekací doba 2–8 měsíců. Zahrada, kvalitní kavárna (úroveň pražské kavárny). Příjemné prostředí v kontaktu s přírodou.",
+    services: ["DPS", "24h péče", "Rehabilitace", "Aktivizace", "Kavárna"],
+    specialServices: [],
+    cost: { main: "Na vyžádání", note: "Čekací doba 2–8 měsíců" }
+  },
+  // Senevida multi-location entry
+  {
+    name: "Senevida Praha (ex Alzheimer Home) – více lokalit",
+    url: "https://www.senevida.cz",
+    address: "Praha 4 (Zátiší, Modřany), Praha 8 (Jasmín, Libeň), Praha 10 (Pitkovice), Průhonice",
+    type: "private", area: "Praha", lat: 50.0480, lng: 14.4680,
+    rating: null,
+    reviews: 0,
+    transport: [
+      {icon:"🚇", text:"Zátiší: metro C Háje", time:"~25 min"},
+      {icon:"🚇", text:"Jasmín/Libeň: metro B Palmovka/C Ládví", time:"~25–30 min"},
+      {icon:"🚌", text:"Modřany: tram/bus z metra C", time:"~30 min"},
+      {icon:"🚌", text:"Pitkovice/Průhonice: bus z metra A", time:"~35 min"}
+    ],
+    summary: "Soukromé (Penta/Senevida, dříve Alzheimer Home + SeneCura). 6 lokací v Praze a okolí. Specializace na Alzheimer/demenci. 24h péče, kavárna/restaurace v každém zařízení, rehabilitace. Komplexní social+zdravotní péče.",
+    services: ["DPS", "DZR (Alzheimer)", "24h péče", "Rehabilitace", "Aktivizace", "Kavárna/restaurace", "Domácí zdravotní péče"],
+    specialServices: ["Alzheimer", "Senevida síť"],
+    cost: { main: "~45–70 000 Kč/měs", note: "Senevida – cena dle konkrétní lokace\ninfo@senevida.cz" }
+  },
+];
+
+let sortCol = -1, sortDir = 1;
+
+function renderStars(r) {
+  if (!r) return '<span style="color:#aaa;font-size:11px">bez hodnocení</span>';
+  const full = Math.round(r);
+  return `<span class="stars">${'★'.repeat(full)}${'☆'.repeat(5-full)}</span> <span>${r.toFixed(1)}</span>`;
+}
+
+function getRow(d) {
+  const typeBadge = d.type === 'public'
+    ? `<span class="type-badge type-public">Veřejný</span>`
+    : `<span class="type-badge type-private">Soukromý</span>`;
+
+  const transportHtml = d.transport.map(t =>
+    `<div class="transport-line"><span class="icon">${t.icon}</span><span>${t.text}${t.time ? `<span class="time-chip">${t.time}</span>` : ''}</span></div>`
+  ).join('');
+
+  const serviceHtml = d.services.map(s => {
+    const isSpec = d.specialServices.includes(s);
+    return `<span class="tag${isSpec?' spec':''}">${s}</span>`;
+  }).join('');
+
+  const costHtml = `<div class="cost-main">${d.cost.main}</div><div class="cost-note">${d.cost.note.replace(/\n/g,'<br>')}</div>`;
+
+  const ratingHtml = d.rating ? `<div class="rating">${renderStars(d.rating)}${d.reviews > 0 ? ` <span style="color:#aaa">(${d.reviews})</span>` : ''}</div>` : '';
+
+  const rowClass = d.type === 'public' ? 'public-row' : 'private-row';
+
+  return `<tr class="${rowClass}" data-type="${d.type}" data-area="${d.area}"
+    data-search="${(d.name+d.address+d.services.join(' ')+d.summary).toLowerCase()}">
+    <td class="name-cell">
+      <div><a href="${d.url}" target="_blank">${d.name}</a></div>
+      <div class="address">${d.address}</div>
+      ${ratingHtml}
+    </td>
+    <td>${typeBadge}</td>
+    <td class="transport-cell">${transportHtml}</td>
+    <td class="summary-cell">${d.summary}</td>
+    <td class="services-cell">${serviceHtml}</td>
+    <td class="cost-cell">${costHtml}</td>
+  </tr>`;
+}
+
+function filterAndRender() {
+  const search = document.getElementById('searchInput').value.toLowerCase().trim();
+  const typeF = document.getElementById('typeFilter').value;
+  const areaF = document.getElementById('areaFilter').value;
+  const tbody = document.getElementById('tableBody');
+
+  let filtered = DATA;
+  if (typeF !== 'all') filtered = filtered.filter(d => d.type === typeF);
+  if (areaF !== 'all') {
+    if (areaF === 'Praha') filtered = filtered.filter(d => d.area === 'Praha');
+    else filtered = filtered.filter(d => d.area === 'okolí');
+  }
+  if (search) filtered = filtered.filter(d =>
+    (d.name+d.address+d.services.join(' ')+d.summary).toLowerCase().includes(search)
+  );
+
+  tbody.innerHTML = filtered.map(renderRow).join('');
+  document.getElementById('countBadge').textContent = `${filtered.length} záznamů`;
+  document.getElementById('noResults').style.display = filtered.length ? 'none' : 'block';
+}
+
+function renderRow(d) { return renderRow._cache ? renderRow._cache[d.name] : renderRow(d); }
+
+// Override to call getRow
+function renderRow(d) { return getRow(d); }
+
+document.getElementById('searchInput').addEventListener('input', filterAndRender);
+document.getElementById('typeFilter').addEventListener('change', filterAndRender);
+document.getElementById('areaFilter').addEventListener('change', filterAndRender);
+
+// Initial render
+filterAndRender();
+
+// ── MAP INITIALIZATION ──
+let map, allMarkers = [], markerLayer;
+
+function initMap() {
+  map = L.map('map', {
+    center: [50.05, 14.48],
+    zoom: 11,
+    zoomControl: true
+  });
+
+  // OpenStreetMap tiles
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 19
+  }).addTo(map);
+
+  // Custom circle marker icons
+  function makeIcon(type) {
+    const color = type === 'public' ? '#2d6a4f' : '#8b5e3c';
+    const border = type === 'public' ? '#1a4a35' : '#5a3a1a';
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36">
+      <path d="M14 0C6.268 0 0 6.268 0 14c0 10.5 14 22 14 22s14-11.5 14-22C28 6.268 21.732 0 14 0z"
+        fill="${color}" stroke="${border}" stroke-width="1.5"/>
+      <circle cx="14" cy="13" r="6" fill="white" opacity="0.9"/>
+    </svg>`;
+    return L.divIcon({
+      html: svg,
+      className: '',
+      iconSize: [28, 36],
+      iconAnchor: [14, 36],
+      popupAnchor: [0, -36]
+    });
+  }
+
+  // Build popup HTML — name matches exactly the DATA entry name
+  function popupHtml(d) {
+    const typeLabel = d.type === 'public' ? 'Veřejný' : 'Soukromý';
+    const typeClass = d.type === 'public' ? 'popup-public' : 'popup-private';
+    const ratingStr = d.rating
+      ? `<div class="popup-rating">${'★'.repeat(Math.round(d.rating))}${'☆'.repeat(5-Math.round(d.rating))} ${d.rating.toFixed(1)}${d.reviews > 0 ? ` (${d.reviews})` : ''}</div>`
+      : '';
+    const topServices = d.services.slice(0, 4).join(' · ');
+    const moreCount = d.services.length > 4 ? ` +${d.services.length - 4}` : '';
+    return `
+      <div class="popup-name">${d.name}</div>
+      <div class="popup-address">${d.address}</div>
+      <span class="popup-type-badge ${typeClass}">${typeLabel}</span>
+      ${ratingStr}
+      <div class="popup-services">${topServices}${moreCount}</div>
+      <a class="popup-link" href="${d.url}" target="_blank">→ Web zařízení</a>
+    `;
+  }
+
+  // Add all markers
+  DATA.forEach(d => {
+    if (!d.lat || !d.lng) return;
+    const marker = L.marker([d.lat, d.lng], { icon: makeIcon(d.type) })
+      .bindPopup(popupHtml(d), { maxWidth: 260 });
+
+    // Clicking marker also highlights matching table row
+    marker.on('click', () => {
+      document.querySelectorAll('#mainTable tbody tr').forEach(tr => {
+        tr.style.background = '';
+      });
+      const rows = document.querySelectorAll('#mainTable tbody tr');
+      rows.forEach(tr => {
+        if (tr.querySelector('.name-cell a') &&
+            tr.querySelector('.name-cell a').textContent.trim() === d.name) {
+          tr.style.background = '#fff3e0';
+          tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      });
+    });
+
+    marker._data = d;
+    allMarkers.push(marker);
+    marker.addTo(map);
+  });
+}
+
+// Map filter: show/hide markers by type/area
+function mapFilter(which) {
+  // Update button states
+  ['All','Public','Private','Praha','Okoli'].forEach(k => {
+    const btn = document.getElementById('mapBtn' + k);
+    if (btn) btn.classList.remove('active');
+  });
+  const btnId = 'mapBtn' + which.charAt(0).toUpperCase() + which.slice(1);
+  const activeBtn = document.getElementById(btnId);
+  if (activeBtn) activeBtn.classList.add('active');
+
+  allMarkers.forEach(m => {
+    const d = m._data;
+    let show = false;
+    if (which === 'all') show = true;
+    else if (which === 'public') show = d.type === 'public';
+    else if (which === 'private') show = d.type === 'private';
+    else if (which === 'Praha') show = d.area === 'Praha';
+    else if (which === 'okoli') show = d.area === 'okolí';
+    if (show) {
+      if (!map.hasLayer(m)) m.addTo(map);
+    } else {
+      if (map.hasLayer(m)) map.removeLayer(m);
+    }
+  });
+
+  // Re-fit bounds to visible markers
+  const visible = allMarkers.filter(m => map.hasLayer(m));
+  if (visible.length > 0) {
+    const group = L.featureGroup(visible);
+    map.fitBounds(group.getBounds().pad(0.08));
+  }
+}
+
+// Initialize map after DOM is ready
+document.addEventListener('DOMContentLoaded', initMap);
+// Fallback if DOMContentLoaded already fired
+if (document.readyState !== 'loading') initMap();
+</script>
+</body>
+</html>
